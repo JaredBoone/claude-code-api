@@ -75,7 +75,11 @@ class ClaudeProcess:
             
             # Wait for process to complete and capture all output
             stdout, stderr = await self.process.communicate()
-            
+            # Log stdout and stderr for debugging
+            if stderr:
+              logger.error(f"Claude stderr: {stderr.decode()}")
+            if stdout:
+              logger.info(f"Claude stdout preview: {stdout.decode()[:500]}")
             logger.info(
                 "Claude process completed",
                 session_id=self.session_id,
