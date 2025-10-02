@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y \
     sudo \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade pip and setuptools to latest versions
+RUN pip3 install --upgrade pip setuptools wheel
+
 # Install Node.js 18+ (required for Claude Code)
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
@@ -35,8 +38,13 @@ WORKDIR /home/claudeuser
 # Set up working directory
 WORKDIR /home/claudeuser/app
 
-# Clone and install claude-code-api
-RUN git clone https://github.com/codingworkflow/claude-code-api.git . && \
+# Clone claude-code-api
+RUN git clone https://github.com/codingworkflow/claude-code-api.git .
+
+# Install dependencies using modern pip (avoiding deprecated setup.py)
+# Use pyproject.toml or requirements if available, otherwise use setup.py with --use-pep517
+RUN pip3 install --user --upgrade pip && \
+    pip3 install --user -e . --use-pep517 || \
     pip3 install --user -e .
 
 # Add user's local bin to PATH
