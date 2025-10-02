@@ -39,6 +39,9 @@ WORKDIR /home/claudeuser
 # Create Claude config directory
 RUN mkdir -p /home/claudeuser/.config/claude
 
+# Create workspace directory for Claude Code
+RUN mkdir -p /home/claudeuser/workspace
+
 # Set up working directory
 WORKDIR /home/claudeuser/app
 
@@ -67,6 +70,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Create entrypoint script to configure Claude Code with API key at runtime
 RUN echo '#!/bin/bash\n\
+set -e\n\
 if [ -n "$ANTHROPIC_API_KEY" ]; then\n\
   echo "Configuring Claude Code with API key..."\n\
   mkdir -p ~/.config/claude\n\
@@ -77,7 +81,20 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then\n\
 }\n\
 EOF\n\
   echo "Claude Code configured successfully"\n\
+  \n\
+  # Test Claude Code can start\n\
+  echo "Testing Claude Code..."\n\
+  claude --version || echo "Warning: Claude Code test failed"\n\
+  \n\
+  # Show config location\n\
+  echo "Config file location: ~/.config/claude/config.json"\n\
+  ls -la ~/.config/claude/ || true\n\
+else\n\
+  echo "WARNING: ANTHROPIC_API_KEY not set!"\n\
 fi\n\
+\n\
+echo "Starting API server..."\n\
+cd /home/claudeuser/app\n\
 exec python3 -m claude_code_api.main' > /home/claudeuser/entrypoint.sh && \
     chmod +x /home/claudeuser/entrypoint.sh
 
