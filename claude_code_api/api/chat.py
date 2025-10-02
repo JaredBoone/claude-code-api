@@ -204,7 +204,7 @@ async def create_chat_completion(
             # Return streaming response
             return StreamingResponse(
                 create_sse_response(claude_session_id, claude_model, claude_process),
-                media_type="text/plain",
+                media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
                     "Connection": "keep-alive",
