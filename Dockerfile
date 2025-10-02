@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     bash \
     sudo \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip and setuptools to latest versions
@@ -35,6 +36,9 @@ RUN useradd -m -s /bin/bash claudeuser && \
 USER claudeuser
 WORKDIR /home/claudeuser
 
+# Create Claude config directory
+RUN mkdir -p /home/claudeuser/.config/claude
+
 # Set up working directory
 WORKDIR /home/claudeuser/app
 
@@ -42,7 +46,6 @@ WORKDIR /home/claudeuser/app
 RUN git clone https://github.com/codingworkflow/claude-code-api.git .
 
 # Install dependencies using modern pip (avoiding deprecated setup.py)
-# Use pyproject.toml or requirements if available, otherwise use setup.py with --use-pep517
 RUN pip3 install --user --upgrade pip && \
     pip3 install --user -e . --use-pep517 || \
     pip3 install --user -e .
@@ -62,5 +65,21 @@ ENV PORT=8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start the API server
-CMD ["python3", "-m", "claude_code_api.main"]
+# Create entrypoint script to configure Claude Code with API key at runtime
+RUN echo '#!/bin/bash\n\
+if [ -n "$ANTHROPIC_API_KEY" ]; then\n\
+  echo "Configuring Claude Code with API key..."\n\
+  mkdir -p ~/.config/claude\n\
+  cat > ~/.config/claude/config.json << EOF\n\
+{\n\
+  "apiKey": "$ANTHROPIC_API_KEY",\n\
+  "autoUpdate": false\n\
+}\n\
+EOF\n\
+  echo "Claude Code configured successfully"\n\
+fi\n\
+exec python3 -m claude_code_api.main' > /home/claudeuser/entrypoint.sh && \
+    chmod +x /home/claudeuser/entrypoint.sh
+
+# Start the API server with entrypoint
+ENTRYPOINT ["/home/claudeuser/entrypoint.sh"]
