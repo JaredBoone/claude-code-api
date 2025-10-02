@@ -278,7 +278,7 @@ async def create_chat_completion(
                 response_size=len(str(response))
             )
             
-            return response
+            return JSONResponse(content=response, media_type="application/json")
     
     except HTTPException:
         # Re-raise HTTP exceptions
