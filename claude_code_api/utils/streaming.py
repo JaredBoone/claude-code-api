@@ -84,14 +84,12 @@ class OpenAIStreamConverter:
             assistant_started = False
             last_content = ""
             chunk_count = 0
-            max_chunks = 5  # Limit chunks for better UX
-            
+            # Removed artificial max_chunks limit to capture complete agentic responses
+
             # Process Claude output
             async for claude_message in claude_process.get_output():
                 chunk_count += 1
-                if chunk_count > max_chunks:
-                    logger.info("Reached max chunks limit, terminating stream")
-                    break
+                # Continue until we get None (true end signal) - no artificial limits
                 try:
                     # Simple: just look for assistant messages in the dict
                     if isinstance(claude_message, dict):
@@ -127,11 +125,10 @@ class OpenAIStreamConverter:
                                 }
                                 yield SSEFormatter.format_event(chunk)
                                 assistant_started = True
-                        
-                        # Stop on result type
-                        if claude_message.get("type") == "result":
-                            break
-                        
+
+                        # Don't stop on result type - continue to capture all agentic responses
+                        # The process will signal true end with None in the queue
+
                 except Exception as e:
                     logger.error("Error processing Claude message", error=str(e))
                     continue
@@ -346,8 +343,10 @@ def create_non_streaming_response(
         completion_id=completion_id
     )
     
-    # Extract assistant content from Claude messages
+    # Extract ALL assistant content from Claude messages to capture complete agentic responses
     content_parts = []
+    assistant_message_count = 0
+
     for i, msg in enumerate(messages):
         logger.info(
             f"Processing message {i}",
@@ -355,18 +354,19 @@ def create_non_streaming_response(
             msg_keys=list(msg.keys()) if isinstance(msg, dict) else [],
             is_assistant=isinstance(msg, dict) and msg.get("type") == "assistant"
         )
-        
+
         if isinstance(msg, dict):
-            # Handle dict messages directly
+            # Collect ALL assistant messages (there may be multiple in agentic workflows)
             if msg.get("type") == "assistant" and msg.get("message"):
+                assistant_message_count += 1
                 message_content = msg["message"].get("content", [])
-                
+
                 logger.info(
-                    f"Found assistant message {i}",
+                    f"Found assistant message #{assistant_message_count} at index {i}",
                     content_type=type(message_content).__name__,
                     content_preview=str(message_content)[:100] if message_content else "empty"
                 )
-                
+
                 # Handle content array format: [{"type":"text","text":"..."}]
                 if isinstance(message_content, list):
                     for content_item in message_content:
@@ -383,16 +383,22 @@ def create_non_streaming_response(
     
     # Use the actual content or fallback - ensure we always have content
     if content_parts:
-        complete_content = "\n".join(content_parts).strip()
+        # Join multiple assistant responses with clear separation for agentic workflows
+        if assistant_message_count > 1:
+            complete_content = "\n\n---\n\n".join(content_parts).strip()
+            logger.info(f"Aggregated {assistant_message_count} assistant messages with separators")
+        else:
+            complete_content = "\n".join(content_parts).strip()
     else:
         complete_content = "Hello! I'm Claude, ready to help."
-    
+
     # Ensure content is never empty
     if not complete_content:
         complete_content = "Response received but content was empty."
-    
+
     logger.info(
         "Final response content",
+        assistant_message_count=assistant_message_count,
         content_parts_count=len(content_parts),
         final_content_length=len(complete_content),
         final_content_preview=complete_content[:100] if complete_content else "empty"

@@ -215,29 +215,24 @@ async def create_chat_completion(
         else:
             # Collect all output for non-streaming response
             messages = []
-            
+
             async for claude_message in claude_process.get_output():
                 # Log each message from Claude
                 logger.info(
                     "Received Claude message",
                     message_type=claude_message.get("type") if isinstance(claude_message, dict) else type(claude_message).__name__,
                     message_keys=list(claude_message.keys()) if isinstance(claude_message, dict) else [],
-                    has_assistant_content=bool(isinstance(claude_message, dict) and 
-                                             claude_message.get("type") == "assistant" and 
+                    has_assistant_content=bool(isinstance(claude_message, dict) and
+                                             claude_message.get("type") == "assistant" and
                                              claude_message.get("message", {}).get("content")),
                     message_preview=str(claude_message)[:200] if claude_message else "None"
                 )
-                
+
                 messages.append(claude_message)
-                
-                # Check if it's a final message by looking at dict structure
-                is_final = False
-                if isinstance(claude_message, dict):
-                    is_final = claude_message.get("type") == "result"
-                
-                # Stop on final message or after a reasonable number of messages
-                if is_final or len(messages) > 10:  # Safety limit for testing
-                    break
+
+                # Continue collecting ALL messages until get_output() returns None
+                # This ensures we capture complete agentic responses with tool use
+                # No artificial limits - let Claude Code complete naturally
             
             # Log what we collected
             logger.info(
