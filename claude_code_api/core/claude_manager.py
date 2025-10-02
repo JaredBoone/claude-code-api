@@ -69,7 +69,8 @@ class ClaudeProcess:
                 *cmd,
                 cwd=src_dir,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                env=os.environ.copy()
             )
             
             # Wait for process to complete and capture all output
