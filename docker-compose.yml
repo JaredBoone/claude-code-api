@@ -1,0 +1,25 @@
+services:
+  claude-code-api:
+    build: .
+    container_name: claude-code-api
+    ports:
+      - "127.0.0.1:8000:8000"  # Only bind to localhost since tunnel will handle external access
+    environment:
+      # REQUIRED: Set your Anthropic API key here or use .env file
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8000
+      # Optional: Project root for Claude Code workspace
+      - CLAUDE_PROJECT_ROOT=/app/workspace
+    volumes:
+      # Mount workspace for persistent projects
+      - ./workspace:/app/workspace
+      # Optional: Mount custom config
+      - ./config:/app/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
