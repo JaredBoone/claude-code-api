@@ -1,11 +1,10 @@
-
 # Use Ubuntu as base for better Claude Code support
 FROM ubuntu:22.04
 
 # Prevent interactive prompts during build
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Install system dependencies including Node.js
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -15,17 +14,13 @@ RUN apt-get update && apt-get install -y \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI (native binary)
-# Use bash explicitly and check for errors
-RUN bash -c 'curl -fsSL https://claude.ai/install.sh | bash' && \
-    echo "Claude Code installation completed" && \
-    ls -la /root/.claude/bin/ || echo "Claude bin directory not found"
+# Install Node.js 18+ (required for Claude Code)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    node --version && npm --version
 
-# Add Claude Code to PATH
-ENV PATH="/root/.claude/bin:${PATH}"
-
-# Verify Claude Code installation
-RUN which claude && \
+# Install Claude Code CLI via npm (more Docker-friendly than native installer)
+RUN npm install -g @anthropic-ai/claude-code && \
     claude --version
 
 # Set up working directory
