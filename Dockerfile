@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     ca-certificates \
     bash \
+    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 18+ (required for Claude Code)
@@ -19,16 +20,27 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
     node --version && npm --version
 
-# Install Claude Code CLI via npm (more Docker-friendly than native installer)
+# Create non-root user for Claude Code (required for --dangerously-skip-permissions)
+RUN useradd -m -s /bin/bash claudeuser && \
+    echo "claudeuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to non-root user
+USER claudeuser
+WORKDIR /home/claudeuser
+
+# Install Claude Code CLI via npm as non-root user
 RUN npm install -g @anthropic-ai/claude-code && \
     claude --version
 
 # Set up working directory
-WORKDIR /app
+WORKDIR /home/claudeuser/app
 
 # Clone and install claude-code-api
 RUN git clone https://github.com/codingworkflow/claude-code-api.git . && \
-    pip3 install -e .
+    pip3 install --user -e .
+
+# Add user's local bin to PATH
+ENV PATH="/home/claudeuser/.local/bin:${PATH}"
 
 # Expose API port
 EXPOSE 8000
