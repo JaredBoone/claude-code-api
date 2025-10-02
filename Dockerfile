@@ -20,17 +20,17 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs && \
     node --version && npm --version
 
-# Create non-root user for Claude Code (required for --dangerously-skip-permissions)
+# Install Claude Code CLI globally as root (before switching to non-root user)
+RUN npm install -g @anthropic-ai/claude-code && \
+    claude --version
+
+# Create non-root user for running Claude Code
 RUN useradd -m -s /bin/bash claudeuser && \
     echo "claudeuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Switch to non-root user
 USER claudeuser
 WORKDIR /home/claudeuser
-
-# Install Claude Code CLI via npm as non-root user
-RUN npm install -g @anthropic-ai/claude-code && \
-    claude --version
 
 # Set up working directory
 WORKDIR /home/claudeuser/app
