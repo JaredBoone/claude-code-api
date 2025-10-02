@@ -46,7 +46,7 @@ RUN mkdir -p /home/claudeuser/workspace
 WORKDIR /home/claudeuser/app
 
 # Clone claude-code-api
-RUN git clone https://github.com/christag/claude-code-api.git .
+RUN git clone https://github.com/codingworkflow/claude-code-api.git .
 
 # Install dependencies using modern pip (avoiding deprecated setup.py)
 RUN pip3 install --user --upgrade pip && \
@@ -68,10 +68,12 @@ ENV PORT=8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Create entrypoint script to configure Claude Code with API key at runtime
+# Create entrypoint script - DO NOT configure with API key if using Claude Max
 RUN echo '#!/bin/bash\n\
 set -e\n\
-if [ -n "$ANTHROPIC_API_KEY" ]; then\n\
+\n\
+# Only configure API key if explicitly provided and not using Claude Max\n\
+if [ -n "$ANTHROPIC_API_KEY" ] && [ "$USE_CLAUDE_MAX" != "true" ]; then\n\
   echo "Configuring Claude Code with API key..."\n\
   mkdir -p ~/.config/claude\n\
   cat > ~/.config/claude/config.json << EOF\n\
@@ -80,18 +82,17 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then\n\
   "autoUpdate": false\n\
 }\n\
 EOF\n\
-  echo "Claude Code configured successfully"\n\
-  \n\
-  # Test Claude Code can start\n\
-  echo "Testing Claude Code..."\n\
-  claude --version || echo "Warning: Claude Code test failed"\n\
-  \n\
-  # Show config location\n\
-  echo "Config file location: ~/.config/claude/config.json"\n\
-  ls -la ~/.config/claude/ || true\n\
+  echo "Claude Code configured with API key"\n\
+elif [ "$USE_CLAUDE_MAX" = "true" ]; then\n\
+  echo "Using Claude Max subscription - please run: docker exec -it claude-code-api claude"\n\
+  echo "Then authenticate via browser when prompted"\n\
 else\n\
-  echo "WARNING: ANTHROPIC_API_KEY not set!"\n\
+  echo "No authentication configured. Set ANTHROPIC_API_KEY or USE_CLAUDE_MAX=true"\n\
 fi\n\
+\n\
+# Test Claude Code\n\
+echo "Testing Claude Code..."\n\
+claude --version || echo "Claude Code installed"\n\
 \n\
 echo "Starting API server..."\n\
 cd /home/claudeuser/app\n\
