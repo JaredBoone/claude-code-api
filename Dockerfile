@@ -1,3 +1,4 @@
+
 # Use Ubuntu as base for better Claude Code support
 FROM ubuntu:22.04
 
@@ -11,13 +12,21 @@ RUN apt-get update && apt-get install -y \
     python3.10 \
     python3-pip \
     ca-certificates \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Claude Code CLI (native binary)
-RUN curl -fsSL https://claude.ai/install.sh | bash
+# Use bash explicitly and check for errors
+RUN bash -c 'curl -fsSL https://claude.ai/install.sh | bash' && \
+    echo "Claude Code installation completed" && \
+    ls -la /root/.claude/bin/ || echo "Claude bin directory not found"
+
+# Add Claude Code to PATH
+ENV PATH="/root/.claude/bin:${PATH}"
 
 # Verify Claude Code installation
-RUN /root/.claude/bin/claude --version
+RUN which claude && \
+    claude --version
 
 # Set up working directory
 WORKDIR /app
