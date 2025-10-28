@@ -72,10 +72,18 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
+# Fix permissions on mounted claude config directory if needed\n\
+if [ -d ~/.config/claude ] && [ "$(stat -c %u ~/.config/claude)" != "$(id -u)" ]; then\n\
+  echo "Fixing permissions on ~/.config/claude..."\n\
+  sudo chown -R $(id -u):$(id -g) ~/.config/claude\n\
+fi\n\
+\n\
+# Ensure directory exists with correct permissions\n\
+mkdir -p ~/.config/claude\n\
+\n\
 # Only configure API key if explicitly provided and not using Claude Max\n\
 if [ -n "$ANTHROPIC_API_KEY" ] && [ "$USE_CLAUDE_MAX" != "true" ]; then\n\
   echo "Configuring Claude Code with API key..."\n\
-  mkdir -p ~/.config/claude\n\
   cat > ~/.config/claude/config.json << EOF\n\
 {\n\
   "apiKey": "$ANTHROPIC_API_KEY",\n\
