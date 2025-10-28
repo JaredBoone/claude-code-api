@@ -27,54 +27,83 @@ class ClaudeProcess:
         self.error_queue = asyncio.Queue()
         
     async def start(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         model: str = None,
         system_prompt: str = None,
         resume_session: str = None
     ) -> bool:
         """Start Claude Code process and wait for completion."""
         try:
+            # Determine if we need to use stdin (for long prompts to avoid "Argument list too long")
+            # Linux typically has a limit around 128KB for total args+env
+            # Use stdin if prompt is longer than 50KB to be safe
+            use_stdin = len(prompt) > 50000
+
             # Prepare real command - using exact format from working Claudia example
             cmd = [settings.claude_binary_path]
-            cmd.extend(["-p", prompt])
-            
+
+            # Only add prompt as argument if not using stdin
+            if not use_stdin:
+                cmd.extend(["-p", prompt])
+            else:
+                # When using stdin, still need -p flag but without prompt argument
+                cmd.append("-p")
+
             if system_prompt:
+                # For long system prompts, we'll need to handle them differently too
+                if len(system_prompt) > 50000:
+                    logger.warning(
+                        "System prompt is very long and may cause issues",
+                        system_prompt_length=len(system_prompt)
+                    )
                 cmd.extend(["--system-prompt", system_prompt])
-            
+
             if model:
                 cmd.extend(["--model", model])
-            
+
             # Always use stream-json output format (exact order from working example)
             cmd.extend([
                 "--output-format", "stream-json",
-                "--verbose", 
+                "--verbose",
                 "--dangerously-skip-permissions"
             ])
-            
+
+            # When using stdin, specify input format
+            if use_stdin:
+                cmd.extend(["--input-format", "text"])
+
             logger.info(
                 "Starting Claude process",
                 session_id=self.session_id,
                 project_path=self.project_path,
-                model=model or settings.default_model
+                model=model or settings.default_model,
+                prompt_length=len(prompt),
+                use_stdin=use_stdin
             )
-            
+
             # Start process from src directory (where Claude works without API key)
             src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
             logger.info(f"Starting Claude from directory: {src_dir}")
             logger.info(f"Command: {' '.join(cmd)}")
-            
+
             # Claude CLI runs to completion, so we run it and capture all output
             self.process = await asyncio.create_subprocess_exec(
                 *cmd,
                 cwd=src_dir,
+                stdin=asyncio.subprocess.PIPE if use_stdin else None,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=os.environ.copy()
             )
-            
-            # Wait for process to complete and capture all output
-            stdout, stderr = await self.process.communicate()
+
+            # If using stdin, send the prompt and close stdin
+            if use_stdin:
+                prompt_input = prompt.encode('utf-8')
+                stdout, stderr = await self.process.communicate(input=prompt_input)
+            else:
+                # Wait for process to complete and capture all output
+                stdout, stderr = await self.process.communicate()
             # Log stdout and stderr for debugging
             # Debug logging MUST be here, before any error checking
             logger.error(f"=== DEBUG: Exit code: {self.process.returncode} ===")
