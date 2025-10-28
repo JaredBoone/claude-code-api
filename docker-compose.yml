@@ -18,8 +18,8 @@ services:
     volumes:
       # Mount workspace for persistent projects
       - ./workspace:/home/claudeuser/app/workspace
-      # Mount Claude config to persist authentication
-      - ./claude-config:/home/claudeuser/.config/claude
+      # Mount Claude config to persist authentication (Claude stores auth in ~/.claude/)
+      - ./claude-config:/home/claudeuser/.claude
       # Optional: Mount custom config
       - ./config:/home/claudeuser/app/config
     restart: unless-stopped
