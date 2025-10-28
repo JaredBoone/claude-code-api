@@ -9,6 +9,7 @@ from enum import Enum
 class ClaudeModel(str, Enum):
     """Available Claude models - matching Claude Code CLI supported models."""
     OPUS_4 = "claude-opus-4-20250514"
+    SONNET_45 = "claude-sonnet-4-5"
     SONNET_4 = "claude-sonnet-4-20250514"
     SONNET_37 = "claude-3-7-sonnet-20250219"
     HAIKU_35 = "claude-3-5-haiku-20241022"
@@ -125,7 +126,7 @@ class ClaudeProjectConfig(BaseModel):
     project_id: str = Field(..., description="Project ID")
     name: str = Field(..., description="Project name")
     path: str = Field(..., description="Project path")
-    default_model: str = Field(ClaudeModel.HAIKU_35, description="Default model")
+    default_model: str = Field(ClaudeModel.SONNET_45, description="Default model")
     system_prompt: Optional[str] = Field(None, description="Default system prompt")
     tools_enabled: List[ClaudeToolType] = Field(default_factory=list, description="Enabled tools")
     max_tokens: Optional[int] = Field(None, description="Maximum tokens per request")
@@ -209,7 +210,7 @@ def validate_claude_model(model: str) -> str:
 
 def get_default_model() -> str:
     """Get the default Claude model."""
-    return ClaudeModel.HAIKU_35
+    return ClaudeModel.SONNET_45
 
 
 def get_model_info(model_id: str) -> ClaudeModelInfo:
@@ -222,6 +223,16 @@ def get_model_info(model_id: str) -> ClaudeModelInfo:
             max_tokens=500000,
             input_cost_per_1k=15.0,
             output_cost_per_1k=75.0,
+            supports_streaming=True,
+            supports_tools=True
+        ),
+        ClaudeModel.SONNET_45: ClaudeModelInfo(
+            id=ClaudeModel.SONNET_45,
+            name="Claude Sonnet 4.5",
+            description="Latest Sonnet model with enhanced performance and capabilities",
+            max_tokens=500000,
+            input_cost_per_1k=3.0,
+            output_cost_per_1k=15.0,
             supports_streaming=True,
             supports_tools=True
         ),

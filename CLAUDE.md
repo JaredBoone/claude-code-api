@@ -100,9 +100,10 @@ make kill PORT=8000   # Kill process on specific port
 ## Supported Claude Models
 
 - `claude-opus-4-20250514` - Claude Opus 4 (Most powerful)
-- `claude-sonnet-4-20250514` - Claude Sonnet 4 (Latest Sonnet)
-- `claude-3-7-sonnet-20250219` - Claude Sonnet 3.7 (Advanced)
-- `claude-3-5-haiku-20241022` - Claude Haiku 3.5 (Fast, default)
+- `claude-sonnet-4-5` - Claude Sonnet 4.5 (Latest Sonnet, default)
+- `claude-sonnet-4-20250514` - Claude Sonnet 4 (Advanced Sonnet)
+- `claude-3-7-sonnet-20250219` - Claude Sonnet 3.7 (Previous Sonnet)
+- `claude-3-5-haiku-20241022` - Claude Haiku 3.5 (Fast)
 
 Models are mapped in `models/claude.py` and validated before use.
 
@@ -111,7 +112,7 @@ Models are mapped in `models/claude.py` and validated before use.
 Key settings in `core/config.py`:
 - `claude_binary_path`: Auto-detected from PATH or npm global install
 - `project_root`: `/tmp/claude_projects` - workspace for Claude processes
-- `default_model`: `claude-3-5-haiku-20241022`
+- `default_model`: `claude-sonnet-4-5`
 - `max_concurrent_sessions`: 10
 - `streaming_timeout_seconds`: 300
 
