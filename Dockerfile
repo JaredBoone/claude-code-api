@@ -46,7 +46,7 @@ RUN mkdir -p /home/claudeuser/workspace
 WORKDIR /home/claudeuser/app
 
 # Clone claude-code-api
-RUN git clone https://github.com/christag/claude-code-api.git .
+RUN git clone https://github.com/JaredBoone/claude-code-api.git .
 
 # Install dependencies using modern pip (avoiding deprecated setup.py)
 RUN pip3 install --user --upgrade pip && \
